@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bangkok Transit Navigator</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2f7;--card:#fff;--txt:#152033;--mut:#64748b;--bd:#e2e8f0;--soft:#f1f5f9;--pri:#2563eb;--svgbg:#f8fafc;--lbl:#1e293b;--halo:#fff;--sh:0 12px 32px -14px rgba(15,23,42,.3);--f:'Noto Sans Thai','Segoe UI',Tahoma,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1218;--card:#172029;--txt:#e7ecf1;--mut:#94a3b8;--bd:#263340;--soft:#1f2b36;--svgbg:#111820;--lbl:#e2e8f0;--halo:#111820;--pri:#5b9bff}}
+:root[data-theme="dark"]{--bg:#0d1218;--card:#172029;--txt:#e7ecf1;--mut:#94a3b8;--bd:#263340;--soft:#1f2b36;--svgbg:#111820;--lbl:#e2e8f0;--halo:#111820;--pri:#5b9bff}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg)}
+body{font-family:var(--f);color:var(--txt);padding:16px;max-width:1280px;margin:0 auto}
+.hero{position:relative;overflow:hidden;color:#fff;border-radius:20px;padding:22px 24px;margin-bottom:16px;background:linear-gradient(120deg,#0f2a5c,#2563eb 55%,#7c3aed);box-shadow:var(--sh);display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.hero::after{content:"";position:absolute;right:-30px;top:0;bottom:0;width:220px;transform:skewX(-20deg);background:linear-gradient(90deg,#7ac14255 0 33%,#00796b66 33% 66%,#1e5bb866 66%);opacity:.7}
+.brand{display:flex;gap:14px;align-items:center;position:relative;z-index:1}
+.logo{font-size:2rem;background:#ffffff26;border-radius:14px;width:52px;height:52px;display:grid;place-items:center}
+h1{font-size:1.5rem;line-height:1.2}.brand p{opacity:.85;font-size:.85rem}
+.pill{position:relative;z-index:1;background:#ffffff26;backdrop-filter:blur(6px);border-radius:99px;padding:6px 14px;font-size:.78rem}
+.grid{display:grid;grid-template-columns:minmax(320px,400px) 1fr;gap:16px;align-items:start}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:18px;box-shadow:var(--sh);margin-bottom:16px}
+h2{font-size:1.05rem;margin-bottom:14px}
+label.t{display:block;font-size:.78rem;font-weight:700;color:var(--mut);margin:12px 0 5px;letter-spacing:.02em}
+select,input[type=time]{width:100%;padding:11px 12px;border:1px solid var(--bd);border-radius:12px;font:inherit;background:var(--soft);color:var(--txt)}
+select:focus,input:focus{outline:2px solid var(--pri)}
+.trow{display:flex;gap:8px}.now{border:1px solid var(--bd);background:var(--soft);color:var(--pri);border-radius:12px;padding:0 16px;font:700 .85rem var(--f);cursor:pointer;white-space:nowrap}.now:hover{border-color:var(--pri)}
+.od{position:relative}
+.swap{position:absolute;right:10px;top:50%;transform:translateY(-10%);width:34px;height:34px;border-radius:50%;border:1px solid var(--bd);background:var(--card);color:var(--pri);font-size:1rem;cursor:pointer;box-shadow:var(--sh)}
+.od select{padding-right:52px}
+.seg{display:flex;background:var(--soft);border-radius:12px;padding:4px;gap:4px}
+.seg input{display:none}
+.seg label{flex:1;text-align:center;padding:9px 6px;border-radius:9px;font-size:.84rem;cursor:pointer;color:var(--mut);transition:.2s}
+.seg input:checked+label{background:var(--card);color:var(--pri);font-weight:700;box-shadow:0 2px 8px -2px rgba(0,0,0,.25)}
+.go{width:100%;margin-top:18px;padding:13px;border:0;border-radius:12px;color:#fff;font:700 1rem var(--f);cursor:pointer;background:linear-gradient(120deg,#2563eb,#7c3aed);box-shadow:0 8px 20px -8px #4f46e5}
+.go:hover{filter:brightness(1.08)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chips button{border:1px solid var(--bd);background:var(--soft);color:var(--txt);border-radius:99px;padding:5px 11px;font:.76rem var(--f);cursor:pointer}
+.chips button:hover{border-color:var(--pri);color:var(--pri)}
+#res{animation:up .4s ease}
+@keyframes up{from{opacity:0;transform:translateY(8px)}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.stat{background:var(--soft);border-radius:12px;padding:10px 6px;text-align:center}
+.stat b{display:block;font-size:1.15rem}.stat span{font-size:.68rem;color:var(--mut)}
+.leg{border-left:5px solid var(--c);background:var(--soft);border-radius:0 12px 12px 0;padding:10px 12px;margin:0 0 4px}
+.lh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.76rem;color:var(--mut);margin-bottom:6px}
+.badge{background:var(--c);color:#fff;border-radius:99px;padding:2px 10px;font-weight:700}
+.leg ol{list-style:none;font-size:.85rem}
+.leg li{padding:2px 0 2px 16px;position:relative;color:var(--mut)}
+.leg li::before{content:"";position:absolute;left:0;top:.65em;width:7px;height:7px;border-radius:50%;background:var(--c);opacity:.5}
+.leg li.key{color:var(--txt);font-weight:600}.leg li.key::before{opacity:1;box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 25%,transparent)}
+.leg small{color:var(--mut);font-weight:400}
+.xfer{margin:4px 0 4px 6px;padding:8px 12px;border-left:3px dashed #f59e0b;font-size:.82rem;background:color-mix(in srgb,#f59e0b 10%,transparent);border-radius:0 10px 10px 0}
+.mapwrap{overflow-x:auto;border-radius:14px;background:var(--svgbg);border:1px solid var(--bd)}
+svg{display:block;width:100%;min-width:620px;height:auto}
+svg text{font:600 11px var(--f);fill:var(--lbl);paint-order:stroke;stroke:var(--halo);stroke-width:3px;stroke-linejoin:round}
+.route{animation:fade .6s ease both}
+@keyframes fade{from{opacity:0}}
+.pin{animation:pulse 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{50%{transform:scale(1.15)}}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:.78rem;color:var(--mut)}
+.legend i{display:inline-block;width:22px;height:6px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.foot{font-size:.78rem;color:var(--mut);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.foot label{cursor:pointer;color:var(--pri);font-weight:700}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="brand"><div class="logo">🚇</div><div><h1>Bangkok Transit Navigator</h1><p data-i="sub"></p></div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;position:relative;z-index:1"><button type="button" class="pill" id="lang" style="border:0;color:#fff;cursor:pointer;font:inherit;font-size:.78rem;font-weight:700">EN</button><div class="pill" id="status">…</div></div>
+</header>
+
+<main class="grid">
+  <section>
+    <form class="card" id="form">
+      <h2 data-i="plan"></h2>
+      <div class="od">
+        <label class="t" for="from" data-i="from"></label><select id="from"></select>
+        <button type="button" class="swap" id="swap" >⇅</button>
+        <label class="t" for="to" data-i="to"></label><select id="to"></select>
+      </div>
+      <label class="t" data-i="tmode"></label>
+      <div class="seg"><input type="radio" name="tm" id="tm1" value="depart" checked><label for="tm1" data-i="depart"></label><input type="radio" name="tm" id="tm2" value="arrive"><label for="tm2" data-i="arrive"></label></div>
+      <label class="t" for="time" data-i="time"></label><div class="trow"><input type="time" id="time" required><button type="button" class="now" id="now" data-i="now"></button></div>
+      <label class="t" data-i="omode"></label>
+      <div class="seg"><input type="radio" name="om" id="om1" value="fastest" checked><label for="om1" data-i="fastest"></label><input type="radio" name="om" id="om2" value="fewest"><label for="om2" data-i="fewest"></label></div>
+      <button class="go" type="submit" data-i="go"></button>
+      <div class="chips" id="chips"></div>
+    </form>
+    <div class="card" id="res" hidden></div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2 data-i="mapTitle"></h2>
+      <div class="mapwrap"><svg id="map" viewBox="0 0 800 620" role="img" aria-label="แผนที่รถไฟฟ้า"></svg></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card foot"><span id="note"></span><label><span data-i="loadCsv"></span><input type="file" id="file" accept=".csv,text/csv" hidden></label></div>
+  </section>
+</main>
+
+<script type="text/csv" id="csvData">Source_Station_Code,Source_Station_Name,Target_Station_Code,Target_Station_Name,Edge_Type,Line_Context
+N24,Khu Khot,N23,Yaek Kor Por Aor,Line Track,BTS Sukhumvit Line
+N23,Yaek Kor Por Aor,N22,Royal Thai Air Force Museum,Line Track,BTS Sukhumvit Line
+N22,Royal Thai Air Force Museum,N21,Bhumibol Adulyadej Hospital,Line Track,BTS Sukhumvit Line
+N21,Bhumibol Adulyadej Hospital,N20,Saphan Mai,Line Track,BTS Sukhumvit Line
+N20,Saphan Mai,N19,Sai Yud,Line Track,BTS Sukhumvit Line
+N19,Sai Yud,N18,Phahon Yothin 50,Line Track,BTS Sukhumvit Line
+N18,Phahon Yothin 50,N17,Wat Phra Sri Mahathat,Line Track,BTS Sukhumvit Line
+N17,Wat Phra Sri Mahathat,N16,11th Infantry Regiment,Line Track,BTS Sukhumvit Line
+N16,11th Infantry Regiment,N15,Bang Bua,Line Track,BTS Sukhumvit Line
+N15,Bang Bua,N14,Royal Forest Department,Line Track,BTS Sukhumvit Line
+N14,Royal Forest Department,N13,Sripatum,Line Track,BTS Sukhumvit Line
+N13,Sripatum,N12,Sena Nikhom,Line Track,BTS Sukhumvit Line
+N12,Sena Nikhom,N11,Kasetsart University,Line Track,BTS Sukhumvit Line
+N11,Kasetsart University,N10,Phahonyothin 24,Line Track,BTS Sukhumvit Line
+N10,Phahonyothin 24,N9,Ha Yaek Lat Phrao,Line Track,BTS Sukhumvit Line
+N9,Ha Yaek Lat Phrao,N8,Mo Chit,Line Track,BTS Sukhumvit Line
+N8,Mo Chit,N7,Saphan Khwai,Line Track,BTS Sukhumvit Line
+N7,Saphan Khwai,N5,Ari,Line Track,BTS Sukhumvit Line
+N5,Ari,N4,Sanam Pao,Line Track,BTS Sukhumvit Line
+N4,Sanam Pao,N3,Victory Monument,Line Track,BTS Sukhumvit Line
+N3,Victory Monument,N2,Phaya Thai,Line Track,BTS Sukhumvit Line
+N2,Phaya Thai,N1,Ratchathewi,Line Track,BTS Sukhumvit Line
+N1,Ratchathewi,CEN,Siam,Line Track,BTS Sukhumvit Line
+CEN,Siam,E1,Chit Lom,Line Track,BTS Sukhumvit Line
+E1,Chit Lom,E2,Ploen Chit,Line Track,BTS Sukhumvit Line
+E2,Ploen Chit,E3,Nana,Line Track,BTS Sukhumvit Line
+E3,Nana,E4,Asok,Line Track,BTS Sukhumvit Line
+E4,Asok,E5,Phrom Phong,Line Track,BTS Sukhumvit Line
+E5,Phrom Phong,E6,Thong Lo,Line Track,BTS Sukhumvit Line
+E6,Thong Lo,E7,Ekkamai,Line Track,BTS Sukhumvit Line
+E7,Ekkamai,E8,Phra Khanong,Line Track,BTS Sukhumvit Line
+E8,Phra Khanong,E9,On Nut,Line Track,BTS Sukhumvit Line
+E9,On Nut,E10,Bang Chak,Line Track,BTS Sukhumvit Line
+E10,Bang Chak,E11,Punnawithi,Line Track,BTS Sukhumvit Line
+E11,Punnawithi,E12,Udom Suk,Line Track,BTS Sukhumvit Line
+E12,Udom Suk,E13,Bang Na,Line Track,BTS Sukhumvit Line
+E13,Bang Na,E14,Bearing,Line Track,BTS Sukhumvit Line
+E14,Bearing,E15,Samrong,Line Track,BTS Sukhumvit Line
+E15,Samrong,E16,Pu Chao,Line Track,BTS Sukhumvit Line
+E16,Pu Chao,E17,Chang Erawan,Line Track,BTS Sukhumvit Line
+E17,Chang Erawan,E18,Royal Thai Naval Academy,Line Track,BTS Sukhumvit Line
+E18,Royal Thai Naval Academy,E19,Pak Nam,Line Track,BTS Sukhumvit Line
+E19,Pak Nam,E20,Srinagarindra,Line Track,BTS Sukhumvit Line
+E20,Srinagarindra,E21,Phraek Sa,Line Track,BTS Sukhumvit Line
+E21,Phraek Sa,E22,Sai Luat,Line Track,BTS Sukhumvit Line
+E22,Sai Luat,E23,Kheha,Line Track,BTS Sukhumvit Line
+W1,National Stadium,CEN,Siam,Line Track,BTS Silom Line
+CEN,Siam,S1,Ratchadamri,Line Track,BTS Silom Line
+S1,Ratchadamri,S2,Sala Daeng,Line Track,BTS Silom Line
+S2,Sala Daeng,S3,Chong Nonsi,Line Track,BTS Silom Line
+S3,Chong Nonsi,S5,Surasak,Line Track,BTS Silom Line
+S5,Surasak,S6,Saphan Taksin,Line Track,BTS Silom Line
+S6,Saphan Taksin,S7,Krung Thon Buri,Line Track,BTS Silom Line
+S7,Krung Thon Buri,S8,Wongwian Yai,Line Track,BTS Silom Line
+S8,Wongwian Yai,S9,Pho Nimit,Line Track,BTS Silom Line
+S9,Pho Nimit,S10,Talat Phlu,Line Track,BTS Silom Line
+S10,Talat Phlu,S11,Wutthakat,Line Track,BTS Silom Line
+S11,Wutthakat,S12,Bang Wa,Line Track,BTS Silom Line
+BL01,Tha Phra,BL02,Charan 13,Line Track,MRT Blue Line
+BL02,Charan 13,BL03,Fai Chai,Line Track,MRT Blue Line
+BL03,Fai Chai,BL04,Bang Khun Non,Line Track,MRT Blue Line
+BL04,Bang Khun Non,BL05,Bang Yi Khan,Line Track,MRT Blue Line
+BL05,Bang Yi Khan,BL06,Bang Phlat,Line Track,MRT Blue Line
+BL06,Bang Phlat,BL07,Bang O,Line Track,MRT Blue Line
+BL07,Bang O,BL08,Bang Pho,Line Track,MRT Blue Line
+BL08,Bang Pho,BL09,Tao Poon,Line Track,MRT Blue Line
+BL09,Tao Poon,BL10,Bang Sue,Line Track,MRT Blue Line
+BL10,Bang Sue,BL11,Kamphaeng Phet,Line Track,MRT Blue Line
+BL11,Kamphaeng Phet,BL12,Chatuchak Park,Line Track,MRT Blue Line
+BL12,Chatuchak Park,BL13,Phahon Yothin,Line Track,MRT Blue Line
+BL13,Phahon Yothin,BL14,Lat Phrao,Line Track,MRT Blue Line
+BL14,Lat Phrao,BL15,Ratchadaphisek,Line Track,MRT Blue Line
+BL15,Ratchadaphisek,BL16,Sutthisan,Line Track,MRT Blue Line
+BL16,Sutthisan,BL17,Huai Khwang,Line Track,MRT Blue Line
+BL17,Huai Khwang,BL18,Thailand Cultural Centre,Line Track,MRT Blue Line
+BL18,Thailand Cultural Centre,BL19,Phra Ram 9,Line Track,MRT Blue Line
+BL19,Phra Ram 9,BL20,Phetchaburi,Line Track,MRT Blue Line
+BL20,Phetchaburi,BL21,Sukhumvit,Line Track,MRT Blue Line
+BL21,Sukhumvit,BL22,Queen Sirikit National Convention Centre,Line Track,MRT Blue Line
+BL22,Queen Sirikit National Convention Centre,BL23,Khlong Toei,Line Track,MRT Blue Line
+BL23,Khlong Toei,BL24,Lumphini,Line Track,MRT Blue Line
+BL24,Lumphini,BL25,Si Lom,Line Track,MRT Blue Line
+BL25,Si Lom,BL26,Sam Yan,Line Track,MRT Blue Line
+BL26,Sam Yan,BL27,Hua Lamphong,Line Track,MRT Blue Line
+BL27,Hua Lamphong,BL28,Wat Mangkon,Line Track,MRT Blue Line
+BL28,Wat Mangkon,BL29,Sam Yot,Line Track,MRT Blue Line
+BL29,Sam Yot,BL30,Sanam Chai,Line Track,MRT Blue Line
+BL30,Sanam Chai,BL31,Itsaraphap,Line Track,MRT Blue Line
+BL31,Itsaraphap,BL01,Tha Phra,Line Track,MRT Blue Line
+BL01,Tha Phra,BL32,Bang Phai,Line Track,MRT Blue Line
+BL32,Bang Phai,BL33,Bang Wa,Line Track,MRT Blue Line
+BL33,Bang Wa,BL34,Phetkasem 48,Line Track,MRT Blue Line
+BL34,Phetkasem 48,BL35,Phasi Charoen,Line Track,MRT Blue Line
+BL35,Phasi Charoen,BL36,Bang Khae,Line Track,MRT Blue Line
+BL36,Bang Khae,BL37,Lak Song,Line Track,MRT Blue Line
+BL01,Tha Phra,BL32,Bang Phai,Line Track,MRT Blue Line Branch
+CEN,Siam,CEN,Siam,Interchange Connection,Cross-Platform Interchange (Sukhumvit <-> Silom)
+E4,Asok,BL21,Sukhumvit,Interchange Connection,Interchange Link (BTS Sukhumvit <-> MRT Blue)
+S2,Sala Daeng,BL25,Si Lom,Interchange Connection,Interchange Link (BTS Silom <-> MRT Blue)
+N8,Mo Chit,BL12,Chatuchak Park,Interchange Connection,Interchange Link (BTS Sukhumvit <-> MRT Blue)
+N9,Ha Yaek Lat Phrao,BL13,Phahon Yothin,Interchange Connection,Interchange Link (BTS Sukhumvit <-> MRT Blue)
+S12,Bang Wa,BL33,Bang Wa,Interchange Connection,Interchange Link (BTS Silom <-> MRT Blue)
+BL09,Tao Poon,PP16,Tao Poon,Interchange Connection,Interchange Link (MRT Blue <-> MRT Purple)</script>
+<script>
+// ===== 1. Min-Heap Priority Queue (เขียนเอง) =====
+class PQ {
+  constructor(cmp) { this.h = []; this.c = cmp; }
+  get size() { return this.h.length; }
+  push(v) {
+    const h = this.h; h.push(v); let i = h.length - 1;
+    while (i > 0) { const p = (i - 1) >> 1; if (this.c(h[i], h[p]) < 0) { [h[i], h[p]] = [h[p], h[i]]; i = p; } else break; }
+  }
+  pop() {
+    const h = this.h; if (!h.length) return null;
+    const top = h[0], last = h.pop();
+    if (h.length) {
+      h[0] = last; let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1; let m = i;
+        if (l < h.length && this.c(h[l], h[m]) < 0) m = l;
+        if (r < h.length && this.c(h[r], h[m]) < 0) m = r;
+        if (m === i) break;
+        [h[i], h[m]] = [h[m], h[i]]; i = m;
+      }
+    }
+    return top;
+  }
+}
+
+// ===== 2. CSV -> Graph (Adjacency List, Vertex = รหัสสถานี) =====
+const RIDE = 2.5, WALK = 5, SIAM = 3;   // นาที: นั่งรถ / เดินเปลี่ยนสายข้ามสถานี / เปลี่ยนชานชาลาที่สยาม
+function parseCSV(t) {
+  const rows = []; let r = [], c = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { c += '"'; i++; } else q = false; } else c += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ',') { r.push(c); c = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && t[i + 1] === '\n') i++; r.push(c); c = ''; if (r.length > 1 || r[0]) rows.push(r); r = []; }
+    else c += ch;
+  }
+  if (c || r.length) { r.push(c); rows.push(r); }
+  return rows;
+}
+function buildGraph(text) {
+  const rows = parseCSV(text.replace(/^\uFEFF/, '')).slice(1).filter(r => r.length >= 6);
+  const G = { names: new Map(), lines: new Map(), adj: new Map(), plat: new Map(), skipped: new Set(), rows: rows.length };
+  const add = (u, e) => { if (!G.adj.has(u)) G.adj.set(u, []); G.adj.get(u).push(e); };
+  const seen = new Set(), links = [];
+  for (const raw of rows) {
+    const [a, an, b, bn, type, ctx] = raw.map(x => x.trim());
+    G.names.set(a, an); G.names.set(b, bn);
+    if (type === 'Line Track') {
+      const ln = ctx.replace(/ Branch$/, '');            // สายแยกของสายสีน้ำเงิน = สายเดียวกัน ไม่คิดเป็นการเปลี่ยนสาย
+      for (const c of [a, b]) { if (!G.lines.has(c)) G.lines.set(c, new Set()); G.lines.get(c).add(ln); }
+      const k = [a, b].sort().join('|') + ln; if (seen.has(k)) continue; seen.add(k);
+      add(a, { to: b, line: ln, cost: RIDE, kind: 'ride' }); add(b, { to: a, line: ln, cost: RIDE, kind: 'ride' });
+    } else links.push([a, b]);
+  }
+  for (const [a, b] of links) {
+    if (!G.lines.has(a) || !G.lines.has(b)) { G.skipped.add(G.lines.has(a) ? b : a); continue; }  // เช่น PP16 (ไม่มีสายสีม่วงในข้อมูล)
+    if (a === b) G.plat.set(a, SIAM);                     // Siam Gotcha: รหัสเดียวกัน แต่ต้องเสียเวลาข้ามชานชาลา
+    else { add(a, { to: b, cost: WALK, kind: 'walk' }); add(b, { to: a, cost: WALK, kind: 'walk' }); }
+  }
+  return G;
+}
+
+// ===== 3. Dijkstra บนสถานะ (สถานี, สาย) =====
+function findRoute(starts, ends, mode) {
+  const fewest = mode === 'fewest';
+  const cmp = fewest ? (a, b) => a.tr - b.tr || a.t - b.t : (a, b) => a.t - b.t || a.tr - b.tr;
+  const pq = new PQ(cmp), dist = new Map();
+  const relax = (c, l, t, tr, prev, kind, cost) => {
+    const k = c + '|' + l, o = dist.get(k), n = { c, l, t, tr, prev, kind, cost };
+    if (!o || cmp(n, o) < 0) { dist.set(k, n); pq.push(n); }
+  };
+  for (const s of starts) for (const l of G.lines.get(s)) relax(s, l, 0, 0, null, 'start', 0);
+  while (pq.size) {
+    const u = pq.pop();
+    if (dist.get(u.c + '|' + u.l) !== u) continue;        // ข้ามข้อมูลเก่าในคิว
+    if (ends.includes(u.c)) { const p = []; for (let n = u; n; n = n.prev) p.push(n); return { t: u.t, tr: u.tr, path: p.reverse() }; }
+    for (const e of G.adj.get(u.c) || []) {
+      if (e.kind === 'ride') { if (e.line === u.l) relax(e.to, u.l, u.t + e.cost, u.tr, u, 'ride', e.cost); }
+      else for (const l of G.lines.get(e.to)) relax(e.to, l, u.t + e.cost, u.tr + 1, u, 'walk', e.cost);
+    }
+    const pc = G.plat.get(u.c) ?? WALK;                   // เปลี่ยนสายในสถานีเดียวกัน ต้องมีต้นทุนเสมอ (ไม่ใช่ 0)
+    for (const l of G.lines.get(u.c)) if (l !== u.l) relax(u.c, l, u.t + pc, u.tr + 1, u, 'platform', pc);
+  }
+  return null;
+}
+
+// ===== i18n (ไทย / English) =====
+const D = {
+  th: { now: 'ตอนนี้', sub: 'ค้นหาเส้นทาง BTS · MRT ด้วย Dijkstra และ Priority Queue ที่เขียนเอง', plan: 'วางแผนการเดินทาง', from: 'ต้นทาง', to: 'ปลายทาง', tmode: 'โหมดเวลา', depart: 'ออกเดินทางเวลา', arrive: 'ต้องถึงภายใน', time: 'เวลา', omode: 'รูปแบบเส้นทาง', fastest: '⚡ เร็วที่สุด', fewest: '🔁 เปลี่ยนสายน้อยสุด', go: 'ค้นหาเส้นทาง', mapTitle: 'แผนที่เครือข่ายรถไฟฟ้า', loadCsv: '📂 โหลดไฟล์ CSV อื่น', swap: 'สลับต้นทาง/ปลายทาง',
+    status: (r, n) => `CSV ${r} แถว · ${n} สถานี`, note: (a, b, c) => `ค่าน้ำหนัก: นั่งรถ ${a} นาที/สถานี · เดินเปลี่ยนสาย ${b} นาที · เปลี่ยนที่สยาม ${c} นาที`, skip: s => ` · ข้ามจุดเชื่อม ${s} (ไม่มีสายในข้อมูล)`,
+    rec: 'เส้นทางที่แนะนำ', dep: 'ออกเดินทาง', arr: 'ถึงปลายทาง', dur: 'ใช้เวลา', tr: n => `เปลี่ยนสาย · ${n} สถานี`, leg: (n, m) => `${n} สถานี · ${m} นาที`,
+    plat: (n, c, l, m) => `🔁 เปลี่ยนชานชาลาที่ <b>${n}</b> (${c}) ไป ${l} · ${m} นาที`, walk: (a, ac, b, bc, m) => `🚶 เดินจาก <b>${a}</b> (${ac}) ไป <b>${b}</b> (${bc}) · ${m} นาที`,
+    same: 'ต้นทางและปลายทางต้องต่างกัน', none: 'ไม่พบเส้นทาง', err: 'อ่านไฟล์ CSV ไม่สำเร็จ: ', lwalk: 'เดินเปลี่ยนสาย', lsel: 'เส้นทางที่เลือก', lbl: 'EN' },
+  en: { now: 'Now', sub: 'BTS · MRT route finder powered by a hand-written Dijkstra & Priority Queue', plan: 'Plan your trip', from: 'From', to: 'To', tmode: 'Time mode', depart: 'Depart at', arrive: 'Arrive by', time: 'Time', omode: 'Route preference', fastest: '⚡ Fastest', fewest: '🔁 Fewest interchanges', go: 'Find route', mapTitle: 'Rail network map', loadCsv: '📂 Load another CSV', swap: 'Swap origin / destination',
+    status: (r, n) => `CSV ${r} rows · ${n} stations`, note: (a, b, c) => `Weights: ride ${a} min/stop · interchange walk ${b} min · Siam platform change ${c} min`, skip: s => ` · skipped link ${s} (line not in data)`,
+    rec: 'Recommended route', dep: 'Depart', arr: 'Arrive', dur: 'Duration', tr: n => `Transfers · ${n} stops`, leg: (n, m) => `${n} ${n === 1 ? 'stop' : 'stops'} · ${m} min`,
+    plat: (n, c, l, m) => `🔁 Change platform at <b>${n}</b> (${c}) to ${l} · ${m} min`, walk: (a, ac, b, bc, m) => `🚶 Walk from <b>${a}</b> (${ac}) to <b>${b}</b> (${bc}) · ${m} min`,
+    same: 'Origin and destination must differ', none: 'No route found', err: 'Could not read CSV: ', lwalk: 'Interchange walk', lsel: 'Selected route', lbl: 'ไทย' }
+};
+let lang = 'th', lastRes = null;
+try { lang = localStorage.getItem('lang') || 'th'; } catch (e) {}
+const t = (k, ...a) => { const v = D[lang][k]; return typeof v === 'function' ? v(...a) : v; };
+
+// ===== 4. UI + แผนที่ =====
+const $ = id => document.getElementById(id);
+const COL = { 'BTS Sukhumvit Line': '#7ac142', 'BTS Silom Line': '#00796b', 'MRT Blue Line': '#1e5bb8' };
+const col = l => COL[l] || '#9333ea';
+const LAYOUT = [
+  ['BTS Sukhumvit Line', [['N24', 330, 20], ['CEN', 330, 260], ['E23', 760, 470]]],
+  ['BTS Silom Line', [['W1', 230, 260], ['CEN', 330, 260], ['S12', 110, 560]]],
+  ['MRT Blue Line', [['BL01', 120, 420], ['BL09', 150, 140], ['BL10', 240, 95], ['BL12', 370, 190], ['BL13', 395, 172], ['BL16', 470, 215], ['BL19', 540, 270], ['BL21', 440, 308], ['BL25', 300, 335], ['BL27', 240, 410], ['BL31', 170, 450], ['BL01', 120, 420]]],
+  ['MRT Blue Line', [['BL01', 120, 420], ['BL33', 80, 530], ['BL37', 30, 590]]]
+];
+let G, pos = new Map();
+const nm = c => G.names.get(c);
+function chain(a, b, ln) {                                   // BFS หาสถานีระหว่างจุดยึด เพื่อจัดวางบนแผนที่
+  const prev = new Map([[a, null]]), q = [a];
+  for (let i = 0; i < q.length && !prev.has(b); i++)
+    for (const e of G.adj.get(q[i]) || []) if (e.kind === 'ride' && e.line === ln && !prev.has(e.to)) { prev.set(e.to, q[i]); q.push(e.to); }
+  if (!prev.has(b)) return null;
+  const p = []; for (let c = b; c !== null; c = prev.get(c)) p.push(c); return p.reverse();
+}
+function layout() {
+  pos = new Map();
+  for (const [ln, A] of LAYOUT) for (let k = 0; k < A.length - 1; k++) {
+    if (!G.lines.has(A[k][0]) || !G.lines.has(A[k + 1][0])) continue;
+    const p = chain(A[k][0], A[k + 1][0], ln); if (!p) continue;
+    p.forEach((c, i) => { const t = i / (p.length - 1 || 1); pos.set(c, [A[k][1] + (A[k + 1][1] - A[k][1]) * t, A[k][2] + (A[k + 1][2] - A[k][2]) * t]); });
+  }
+  const miss = [...G.lines.keys()].filter(c => !pos.has(c));  // สถานีที่ไม่รู้ตำแหน่ง (CSV อื่น) วางเป็นวงรอบนอก
+  miss.forEach((c, i) => { const a = i / miss.length * 6.283; pos.set(c, [400 + 370 * Math.cos(a), 310 + 285 * Math.sin(a)]); });
+}
+function drawMap(path) {
+  let h = '';
+  const dim = path ? .28 : 1, seen = new Set(), P = c => pos.get(c);
+  for (const [u, es] of G.adj) for (const e of es) {
+    const k = [u, e.to].sort().join('|') + (e.line || 'w'); if (seen.has(k)) continue; seen.add(k);
+    const [x1, y1] = P(u), [x2, y2] = P(e.to);
+    h += e.kind === 'ride'
+      ? `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col(e.line)}" stroke-width="7" stroke-linecap="round" opacity="${dim}"/>`
+      : `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#94a3b8" stroke-width="3" stroke-dasharray="5 4" opacity="${dim + .2}"/>`;
+  }
+  const on = new Set();
+  if (path) {
+    let seg = '';
+    path.forEach((n, i) => {
+      on.add(n.c); if (!i || n.c === path[i - 1].c) return;
+      const [x1, y1] = P(path[i - 1].c), [x2, y2] = P(n.c), ride = n.kind === 'ride';
+      seg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ride ? col(n.l) : '#f59e0b'}" stroke-width="${ride ? 11 : 7}" stroke-linecap="round" ${ride ? '' : 'stroke-dasharray="8 6"'}/>`;
+    });
+    h += `<g class="route">${seg}</g>`;
+  }
+  const key = new Set(['CEN', 'N24', 'E23', 'W1', 'S12', 'BL01', 'BL37', ...[...G.adj].filter(([, es]) => es.some(e => e.kind === 'walk')).map(x => x[0])]);
+  const first = path && path[0].c, last = path && path.at(-1).c;
+  for (const [c, [x, y]] of pos) {
+    const hit = on.has(c), big = key.has(c);
+    h += `<circle cx="${x}" cy="${y}" r="${hit ? 7 : big ? 6 : 4}" fill="var(--halo)" stroke="${hit ? '#e11d48' : 'var(--lbl)'}" stroke-width="${hit ? 3.5 : 2}"><title>${nm(c)} (${c})</title></circle>`;
+    if (hit || (!path && big)) h += `<text x="${x + 10}" y="${y - 9}">${nm(c)}</text>`;
+  }
+  for (const [c, t, bg] of path ? [[first, 'A', '#16a34a'], [last, 'B', '#e11d48']] : []) {
+    const [x, y] = P(c);
+    h += `<g class="pin"><circle cx="${x}" cy="${y}" r="13" fill="${bg}" stroke="#fff" stroke-width="3"/><text x="${x}" y="${y + 4}" text-anchor="middle" style="fill:#fff;stroke:none;font-size:12px">${t}</text></g>`;
+  }
+  $('map').innerHTML = h;
+}
+function legend() {
+  const ls = new Set(); for (const s of G.lines.values()) s.forEach(l => ls.add(l));
+  $('legend').innerHTML = [...ls].map(l => `<span><i style="background:${col(l)}"></i>${l}</span>`).join('') +
+    `<span><i style="background:repeating-linear-gradient(90deg,#94a3b8 0 5px,transparent 5px 9px);height:3px"></i>${t('lwalk')}</span><span><i style="background:#f59e0b"></i>${t('lsel')}</span>`;
+}
+function fillSelects() {
+  const by = new Map();
+  for (const c of G.lines.keys()) { const n = nm(c); if (!by.has(n)) by.set(n, []); by.get(n).push(c); }
+  for (const sel of [$('from'), $('to')]) {
+    sel.innerHTML = '';
+    for (const [n, cs] of [...by].sort((a, b) => a[0].localeCompare(b[0]))) { const o = new Option(`${n} (${cs.join('/')})`, cs.join(',')); o.dataset.name = n; sel.add(o); }
+  }
+  setSel($('from'), 'Mo Chit'); setSel($('to'), 'Bang Wa');
+}
+function setSel(sel, name) { const o = [...sel.options].find(o => o.dataset.name === name); if (o) sel.value = o.value; }
+const PRESETS = [['หมอชิต → บางหว้า', 'Mo Chit → Bang Wa', 'Mo Chit', 'Bang Wa'], ['สนามกีฬา → ชิดลม (ผ่านสยาม)', 'National Stadium → Chit Lom (via Siam)', 'National Stadium', 'Chit Lom'], ['อโศก → ศาลาแดง', 'Asok → Sala Daeng', 'Asok', 'Sala Daeng'], ['เคหะ → ลักสอง', 'Kheha → Lak Song', 'Kheha', 'Lak Song']];
+function chips() { $('chips').innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${lang === 'th' ? p[0] : p[1]}</button>`).join(''); }
+$('chips').onclick = e => { const i = e.target.dataset.i; if (i === undefined) return; setSel($('from'), PRESETS[i][2]); setSel($('to'), PRESETS[i][3]); $('form').requestSubmit(); };
+$('swap').onclick = () => { const v = $('from').value; $('from').value = $('to').value; $('to').value = v; };
+
+function show(r, mode, timeStr) {
+  lastRes = { r, mode, timeStr };
+  const [hh, mm] = timeStr.split(':').map(Number), base = hh * 60 + mm;
+  const st = mode === 'depart' ? base : base - r.t;
+  const clk = x => { x = Math.round(((x % 1440) + 1440) % 1440); return String(x / 60 | 0).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); };
+  const P = r.path, legs = []; let cur = { line: P[0].l, st: [P[0]] }; legs.push(cur);
+  for (let i = 1; i < P.length; i++) {
+    const n = P[i];
+    if (n.kind === 'ride') cur.st.push(n);
+    else { cur.after = { kind: n.kind, cost: n.cost, from: P[i - 1].c, to: n.c, line: n.l }; cur = { line: n.l, st: [n] }; legs.push(cur); }
+  }
+  const stops = P.filter(n => n.kind === 'ride').length;
+  let h = `<h2>${t('rec')}</h2><div class="stats">
+    <div class="stat"><b>${clk(st)}</b><span>${t('dep')}</span></div><div class="stat"><b>${clk(st + r.t)}</b><span>${t('arr')}</span></div>
+    <div class="stat"><b>${+r.t.toFixed(1)}′</b><span>${t('dur')}</span></div><div class="stat"><b>${r.tr}</b><span>${t('tr', stops)}</span></div></div>`;
+  for (const g of legs) {
+    if (g.st.length > 1) {
+      const a = g.st[0], b = g.st.at(-1);
+      h += `<div class="leg" style="--c:${col(g.line)}"><div class="lh"><span class="badge">${g.line}</span><span>${t('leg', g.st.length - 1, +(b.t - a.t).toFixed(1))}</span></div><ol>` +
+        g.st.map((s, j) => `<li class="${j === 0 || j === g.st.length - 1 ? 'key' : ''}"><b>${clk(st + s.t)}</b> ${nm(s.c)} <small>${s.c}</small></li>`).join('') + '</ol></div>';
+    }
+    const x = g.after;
+    if (x) h += `<div class="xfer">${x.kind === 'platform' ? t('plat', nm(x.from), x.from, x.line, x.cost) : t('walk', nm(x.from), x.from, nm(x.to), x.to, x.cost)}</div>`;
+  }
+  $('res').innerHTML = h; $('res').hidden = false; $('res').style.animation = 'none'; $('res').offsetHeight; $('res').style.animation = '';
+  drawMap(P);
+}
+$('form').onsubmit = e => {
+  e.preventDefault();
+  if ($('from').value === $('to').value) { lastRes = null; $('res').innerHTML = `<h2>${t('same')}</h2>`; $('res').hidden = false; return; }
+  const r = findRoute($('from').value.split(','), $('to').value.split(','), document.querySelector('[name=om]:checked').value);
+  if (r) show(r, document.querySelector('[name=tm]:checked').value, $('time').value);
+  else { lastRes = null; $('res').innerHTML = `<h2>${t('none')}</h2>`; $('res').hidden = false; }
+};
+function load(text) {
+  G = buildGraph(text); layout(); fillSelects(); legend(); drawMap(null); $('res').hidden = true;
+  lastRes = null; texts();
+}
+function texts() {
+  $('status').textContent = t('status', G.rows, G.lines.size);
+  $('note').textContent = t('note', RIDE, WALK, SIAM) + (G.skipped.size ? t('skip', [...G.skipped].join(', ')) : '');
+}
+function setLang(l) {
+  lang = l; try { localStorage.setItem('lang', l); } catch (e) {}
+  document.documentElement.lang = l; $('lang').textContent = t('lbl'); $('swap').title = t('swap');
+  document.querySelectorAll('[data-i]').forEach(el => { if (el.dataset.i in D[l]) el.textContent = t(el.dataset.i); });
+  chips(); if (G) { legend(); texts(); }
+  if (lastRes && !$('res').hidden) show(lastRes.r, lastRes.mode, lastRes.timeStr);
+}
+function setNow() { const d = new Date(); $('time').value = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+$('now').onclick = setNow;
+$('lang').onclick = () => setLang(lang === 'th' ? 'en' : 'th');
+$('file').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { load(await f.text()); } catch (err) { alert(t('err') + err.message); } };
+setNow(); setLang(lang); load($('csvData').textContent); setLang(lang);
+</script>
+</body>
+</html>
