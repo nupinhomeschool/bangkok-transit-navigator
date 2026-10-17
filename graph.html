@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Bangkok Transit Network Graph</title>
+    <!-- โหลดไลบรารี Vis.js สำหรับวาดกราฟเครือข่าย -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h2 { margin-top: 0; }
+        .upload-container {
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        input[type="file"] {
+            color: white;
+        }
+        /* กรอบสำหรับแสดงกราฟ */
+        #mynetwork {
+            width: 100%;
+            height: 80vh;
+            border: 1px solid #444;
+            background-color: #1e1e1e;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🚇 Bangkok Transit Network (Part 2: Visualize the Network)</h2>
+    
+    <div class="upload-container">
+        <label><b>1. อัปโหลดไฟล์ CSV เพื่อสร้างกราฟ: </b></label>
+        <input type="file" id="csvFileInput" accept=".csv">
+    </div>
+
+    <!-- พื้นที่วาดกราฟ -->
+    <div id="mynetwork"></div>
+
+    <script>
+        // เมื่อมีการเลือกไฟล์ CSV
+        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // ใช้ FileReader อ่านข้อมูลจากไฟล์
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const text = event.target.result;
+                buildAndDrawGraph(text);
+            };
+            reader.readAsText(file);
+        });
+
+        function buildAndDrawGraph(csvText) {
+            // แยกข้อมูลเป็นบรรทัดๆ
+            const lines = csvText.trim().split('\n');
+            
+            // เตรียมที่เก็บข้อมูล Node (สถานี) และ Edge (เส้นเชื่อม)
+            const nodes = new vis.DataSet();
+            const edges = new vis.DataSet();
+            const addedNodes = new Set(); // เช็คว่าเคยเพิ่มสถานีนี้ไปหรือยัง
+
+            // เริ่มอ่านข้อมูลตั้งแต่บรรทัดที่ 1 (ข้าม Header บรรทัดที่ 0)
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(',');
+                if (row.length < 6) continue;
+
+                // ดึงข้อมูลแต่ละคอลัมน์ (ตัดช่องว่างหน้าหลังออก)
+                const srcCode = row[0].trim();
+                const srcName = row[1].trim();
+                const tgtCode = row[2].trim();
+                const tgtName = row[3].trim();
+                const edgeType = row[4].trim();
+                const lineCtx = row[5].trim();
+
+                // ข้าม PP16 ตามเงื่อนไข
+                if (srcCode === "PP16" || tgtCode === "PP16") continue;
+
+                // 1. เพิ่ม Node (สถานี)
+                if (!addedNodes.has(srcCode)) {
+                    nodes.add({ 
+                        id: srcCode, 
+                        label: srcName + '\n(' + srcCode + ')', 
+                        shape: 'dot', 
+                        size: 10, 
+                        color: '#ffffff', 
+                        font: {color: '#eeeeee', size: 12} 
+                    });
+                    addedNodes.add(srcCode);
+                }
+                if (!addedNodes.has(tgtCode)) {
+                    nodes.add({ 
+                        id: tgtCode, 
+                        label: tgtName + '\n(' + tgtCode + ')', 
+                        shape: 'dot', 
+                        size: 10, 
+                        color: '#ffffff', 
+                        font: {color: '#eeeeee', size: 12} 
+                    });
+                    addedNodes.add(tgtCode);
+                }
+
+                // 2. กำหนดสีเส้นตามสายรถไฟฟ้า (Part 2 Requirement)
+                let edgeColor = "#aaaaaa";
+                if (lineCtx.includes("Sukhumvit")) edgeColor = "#84c341"; // Light green
+                else if (lineCtx.includes("Silom")) edgeColor = "#009966"; // Dark green
+                else if (lineCtx.includes("Blue")) edgeColor = "#1a5bbf";  // Blue
+
+                // 3. สร้าง Edge (เส้นเชื่อม)
+                if (srcCode !== tgtCode) {
+                    edges.add({
+                        from: srcCode,
+                        to: tgtCode,
+                        color: edgeColor,
+                        width: 4,
+                        // ถ้าเป็นจุดเปลี่ยนสาย (Interchange) ให้ทำเป็นเส้นประ
+                        dashes: edgeType.includes("Interchange") 
+                    });
+                }
+            }
+
+            // 4. ตั้งค่า Vis.js และวาดกราฟ
+            const container = document.getElementById('mynetwork');
+            const data = { nodes: nodes, edges: edges };
+            const options = {
+                physics: {
+                    stabilization: false,
+                    barnesHut: {
+                        gravitationalConstant: -3000,
+                        springConstant: 0.04,
+                        springLength: 150
+                    }
+                },
+                interaction: { hover: true }
+            };
+
+            // ลุย! สร้างกราฟ
+            new vis.Network(container, data, options);
+            console.log("วาดกราฟสำเร็จ!");
+        }
+    </script>
+</body>
+</html>

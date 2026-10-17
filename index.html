@@ -206,8 +206,56 @@ N8,Mo Chit,BL12,Chatuchak Park,Interchange Connection,Interchange Link (BTS Sukh
 N9,Ha Yaek Lat Phrao,BL13,Phahon Yothin,Interchange Connection,Interchange Link (BTS Sukhumvit <-> MRT Blue)
 S12,Bang Wa,BL33,Bang Wa,Interchange Connection,Interchange Link (BTS Silom <-> MRT Blue)
 BL09,Tao Poon,PP16,Tao Poon,Interchange Connection,Interchange Link (MRT Blue <-> MRT Purple)</script>
+
 <script>
-// ===== 1. Min-Heap Priority Queue (เขียนเอง) =====
+// ==========================================
+// GRAPH ADT & DIJKSTRA ENGINE (Lecture 18 Style)
+// ==========================================
+class Vertex {
+  constructor(code, name) {
+    this.code = code;
+    this.name = name;
+    this.lines = new Set();
+  }
+}
+
+class Edge {
+  constructor(source, target, lineContext, edgeType, weight) {
+    this.source = source;
+    this.to = target;
+    this.line = lineContext;
+    this.kind = edgeType;
+    this.cost = weight;
+  }
+}
+
+class GraphADT {
+  constructor() {
+    this.vertices = new Map();
+    this.adj = new Map();
+    this.names = new Map();
+    this.lines = new Map();
+    this.plat = new Map();
+    this.skipped = new Set();
+    this.rows = 0;
+  }
+
+  addVertex(code, name) {
+    if (!this.vertices.has(code)) {
+      this.vertices.set(code, new Vertex(code, name));
+      this.adj.set(code, []);
+    }
+    this.names.set(code, name);
+  }
+
+  addEdge(source, target, lineContext, edgeType, weight) {
+    const edge = new Edge(source, target, lineContext, edgeType, weight);
+    if (!this.adj.has(source)) this.adj.set(source, []);
+    this.adj.get(source).push(edge);
+  }
+}
+
+// ===== Min-Heap Priority Queue (เขียนเองตามหลักโครงสร้างข้อมูล) =====
 class PQ {
   constructor(cmp) { this.h = []; this.c = cmp; }
   get size() { return this.h.length; }
@@ -232,8 +280,8 @@ class PQ {
   }
 }
 
-// ===== 2. CSV -> Graph (Adjacency List, Vertex = รหัสสถานี) =====
-const RIDE = 2.5, WALK = 5, SIAM = 3;   // นาที: นั่งรถ / เดินเปลี่ยนสายข้ามสถานี / เปลี่ยนชานชาลาที่สยาม
+// ===== CSV -> Graph Parser =====
+const RIDE = 2.5, WALK = 5, SIAM = 3; // น้ำหนักเวลา (นาที)
 function parseCSV(t) {
   const rows = []; let r = [], c = '', q = false;
   for (let i = 0; i < t.length; i++) {
@@ -247,61 +295,106 @@ function parseCSV(t) {
   if (c || r.length) { r.push(c); rows.push(r); }
   return rows;
 }
+
 function buildGraph(text) {
   const rows = parseCSV(text.replace(/^\uFEFF/, '')).slice(1).filter(r => r.length >= 6);
-  const G = { names: new Map(), lines: new Map(), adj: new Map(), plat: new Map(), skipped: new Set(), rows: rows.length };
-  const add = (u, e) => { if (!G.adj.has(u)) G.adj.set(u, []); G.adj.get(u).push(e); };
+  const G = new GraphADT();
+  G.rows = rows.length;
   const seen = new Set(), links = [];
+
   for (const raw of rows) {
     const [a, an, b, bn, type, ctx] = raw.map(x => x.trim());
-    G.names.set(a, an); G.names.set(b, bn);
+    G.addVertex(a, an);
+    G.addVertex(b, bn);
+
     if (type === 'Line Track') {
-      const ln = ctx.replace(/ Branch$/, '');            // สายแยกของสายสีน้ำเงิน = สายเดียวกัน ไม่คิดเป็นการเปลี่ยนสาย
-      for (const c of [a, b]) { if (!G.lines.has(c)) G.lines.set(c, new Set()); G.lines.get(c).add(ln); }
-      const k = [a, b].sort().join('|') + ln; if (seen.has(k)) continue; seen.add(k);
-      add(a, { to: b, line: ln, cost: RIDE, kind: 'ride' }); add(b, { to: a, line: ln, cost: RIDE, kind: 'ride' });
-    } else links.push([a, b]);
+      const ln = ctx.replace(/ Branch$/, '');
+      if (!G.lines.has(a)) G.lines.set(a, new Set());
+      if (!G.lines.has(b)) G.lines.set(b, new Set());
+      G.lines.get(a).add(ln);
+      G.lines.get(b).add(ln);
+
+      const k = [a, b].sort().join('|') + ln;
+      if (seen.has(k)) continue;
+      seen.add(k);
+
+      G.addEdge(a, b, ln, 'ride', RIDE);
+      G.addEdge(b, a, ln, 'ride', RIDE);
+    } else {
+      links.push([a, b]);
+    }
   }
+
   for (const [a, b] of links) {
-    if (!G.lines.has(a) || !G.lines.has(b)) { G.skipped.add(G.lines.has(a) ? b : a); continue; }  // เช่น PP16 (ไม่มีสายสีม่วงในข้อมูล)
-    if (a === b) G.plat.set(a, SIAM);                     // Siam Gotcha: รหัสเดียวกัน แต่ต้องเสียเวลาข้ามชานชาลา
-    else { add(a, { to: b, cost: WALK, kind: 'walk' }); add(b, { to: a, cost: WALK, kind: 'walk' }); }
+    if (!G.lines.has(a) || !G.lines.has(b)) {
+      G.skipped.add(G.lines.has(a) ? b : a);
+      continue;
+    }
+    if (a === b) {
+      G.plat.set(a, SIAM); // Siam Gotcha Self-loop
+    } else {
+      G.addEdge(a, b, 'walk', 'walk', WALK);
+      G.addEdge(b, a, 'walk', 'walk', WALK);
+    }
   }
   return G;
 }
 
-// ===== 3. Dijkstra บนสถานะ (สถานี, สาย) =====
+// ===== Dijkstra Shortest Path Engine (State-space: Station & Line) =====
 function findRoute(starts, ends, mode) {
   const fewest = mode === 'fewest';
   const cmp = fewest ? (a, b) => a.tr - b.tr || a.t - b.t : (a, b) => a.t - b.t || a.tr - b.tr;
   const pq = new PQ(cmp), dist = new Map();
+
   const relax = (c, l, t, tr, prev, kind, cost) => {
     const k = c + '|' + l, o = dist.get(k), n = { c, l, t, tr, prev, kind, cost };
     if (!o || cmp(n, o) < 0) { dist.set(k, n); pq.push(n); }
   };
-  for (const s of starts) for (const l of G.lines.get(s)) relax(s, l, 0, 0, null, 'start', 0);
+
+  for (const s of starts) {
+    if (G.lines.has(s)) {
+      for (const l of G.lines.get(s)) relax(s, l, 0, 0, null, 'start', 0);
+    }
+  }
+
   while (pq.size) {
     const u = pq.pop();
-    if (dist.get(u.c + '|' + u.l) !== u) continue;        // ข้ามข้อมูลเก่าในคิว
-    if (ends.includes(u.c)) { const p = []; for (let n = u; n; n = n.prev) p.push(n); return { t: u.t, tr: u.tr, path: p.reverse() }; }
-    for (const e of G.adj.get(u.c) || []) {
-      if (e.kind === 'ride') { if (e.line === u.l) relax(e.to, u.l, u.t + e.cost, u.tr, u, 'ride', e.cost); }
-      else for (const l of G.lines.get(e.to)) relax(e.to, l, u.t + e.cost, u.tr + 1, u, 'walk', e.cost);
+    if (dist.get(u.c + '|' + u.l) !== u) continue;
+    if (ends.includes(u.c)) {
+      const p = []; for (let n = u; n; n = n.prev) p.push(n);
+      return { t: u.t, tr: u.tr, path: p.reverse() };
     }
-    const pc = G.plat.get(u.c) ?? WALK;                   // เปลี่ยนสายในสถานีเดียวกัน ต้องมีต้นทุนเสมอ (ไม่ใช่ 0)
-    for (const l of G.lines.get(u.c)) if (l !== u.l) relax(u.c, l, u.t + pc, u.tr + 1, u, 'platform', pc);
+
+    for (const e of G.adj.get(u.c) || []) {
+      if (e.kind === 'ride') {
+        if (e.line === u.l) relax(e.to, u.l, u.t + e.cost, u.tr, u, 'ride', e.cost);
+      } else {
+        if (G.lines.has(e.to)) {
+          for (const l of G.lines.get(e.to)) {
+            relax(e.to, l, u.t + e.cost, u.tr + 1, u, 'walk', e.cost);
+          }
+        }
+      }
+    }
+
+    const pc = G.plat.get(u.c) ?? WALK;
+    if (G.lines.has(u.c)) {
+      for (const l of G.lines.get(u.c)) {
+        if (l !== u.l) relax(u.c, l, u.t + pc, u.tr + 1, u, 'platform', pc);
+      }
+    }
   }
   return null;
 }
 
-// ===== i18n (ไทย / English) =====
+// ===== i18n Translations (ไทย / English) =====
 const D = {
-  th: { now: 'ตอนนี้', sub: 'ค้นหาเส้นทาง BTS · MRT ด้วย Dijkstra และ Priority Queue ที่เขียนเอง', plan: 'วางแผนการเดินทาง', from: 'ต้นทาง', to: 'ปลายทาง', tmode: 'โหมดเวลา', depart: 'ออกเดินทางเวลา', arrive: 'ต้องถึงภายใน', time: 'เวลา', omode: 'รูปแบบเส้นทาง', fastest: '⚡ เร็วที่สุด', fewest: '🔁 เปลี่ยนสายน้อยสุด', go: 'ค้นหาเส้นทาง', mapTitle: 'แผนที่เครือข่ายรถไฟฟ้า', loadCsv: '📂 โหลดไฟล์ CSV อื่น', swap: 'สลับต้นทาง/ปลายทาง',
+  th: { now: 'ตอนนี้', sub: 'ค้นหาเส้นทาง BTS · MRT ด้วย Graph ADT และ Dijkstra Algorithm', plan: 'วางแผนการเดินทาง', from: 'ต้นทาง', to: 'ปลายทาง', tmode: 'โหมดเวลา', depart: 'ออกเดินทางเวลา', arrive: 'ต้องถึงภายใน', time: 'เวลา', omode: 'รูปแบบเส้นทาง', fastest: '⚡ เร็วที่สุด', fewest: '🔁 เปลี่ยนสายน้อยสุด', go: 'ค้นหาเส้นทาง', mapTitle: 'แผนที่เครือข่ายรถไฟฟ้า', loadCsv: '📂 โหลดไฟล์ CSV อื่น', swap: 'สลับต้นทาง/ปลายทาง',
     status: (r, n) => `CSV ${r} แถว · ${n} สถานี`, note: (a, b, c) => `ค่าน้ำหนัก: นั่งรถ ${a} นาที/สถานี · เดินเปลี่ยนสาย ${b} นาที · เปลี่ยนที่สยาม ${c} นาที`, skip: s => ` · ข้ามจุดเชื่อม ${s} (ไม่มีสายในข้อมูล)`,
     rec: 'เส้นทางที่แนะนำ', dep: 'ออกเดินทาง', arr: 'ถึงปลายทาง', dur: 'ใช้เวลา', tr: n => `เปลี่ยนสาย · ${n} สถานี`, leg: (n, m) => `${n} สถานี · ${m} นาที`,
     plat: (n, c, l, m) => `🔁 เปลี่ยนชานชาลาที่ <b>${n}</b> (${c}) ไป ${l} · ${m} นาที`, walk: (a, ac, b, bc, m) => `🚶 เดินจาก <b>${a}</b> (${ac}) ไป <b>${b}</b> (${bc}) · ${m} นาที`,
     same: 'ต้นทางและปลายทางต้องต่างกัน', none: 'ไม่พบเส้นทาง', err: 'อ่านไฟล์ CSV ไม่สำเร็จ: ', lwalk: 'เดินเปลี่ยนสาย', lsel: 'เส้นทางที่เลือก', lbl: 'EN' },
-  en: { now: 'Now', sub: 'BTS · MRT route finder powered by a hand-written Dijkstra & Priority Queue', plan: 'Plan your trip', from: 'From', to: 'To', tmode: 'Time mode', depart: 'Depart at', arrive: 'Arrive by', time: 'Time', omode: 'Route preference', fastest: '⚡ Fastest', fewest: '🔁 Fewest interchanges', go: 'Find route', mapTitle: 'Rail network map', loadCsv: '📂 Load another CSV', swap: 'Swap origin / destination',
+  en: { now: 'Now', sub: 'BTS · MRT route finder powered by Graph ADT & Dijkstra Algorithm', plan: 'Plan your trip', from: 'From', to: 'To', tmode: 'Time mode', depart: 'Depart at', arrive: 'Arrive by', time: 'Time', omode: 'Route preference', fastest: '⚡ Fastest', fewest: '🔁 Fewest interchanges', go: 'Find route', mapTitle: 'Rail network map', loadCsv: '📂 Load another CSV', swap: 'Swap origin / destination',
     status: (r, n) => `CSV ${r} rows · ${n} stations`, note: (a, b, c) => `Weights: ride ${a} min/stop · interchange walk ${b} min · Siam platform change ${c} min`, skip: s => ` · skipped link ${s} (line not in data)`,
     rec: 'Recommended route', dep: 'Depart', arr: 'Arrive', dur: 'Duration', tr: n => `Transfers · ${n} stops`, leg: (n, m) => `${n} ${n === 1 ? 'stop' : 'stops'} · ${m} min`,
     plat: (n, c, l, m) => `🔁 Change platform at <b>${n}</b> (${c}) to ${l} · ${m} min`, walk: (a, ac, b, bc, m) => `🚶 Walk from <b>${a}</b> (${ac}) to <b>${b}</b> (${bc}) · ${m} min`,
@@ -311,7 +404,7 @@ let lang = 'th', lastRes = null;
 try { lang = localStorage.getItem('lang') || 'th'; } catch (e) {}
 const t = (k, ...a) => { const v = D[lang][k]; return typeof v === 'function' ? v(...a) : v; };
 
-// ===== 4. UI + แผนที่ =====
+// ===== UI & Map Rendering =====
 const $ = id => document.getElementById(id);
 const COL = { 'BTS Sukhumvit Line': '#7ac142', 'BTS Silom Line': '#00796b', 'MRT Blue Line': '#1e5bb8' };
 const col = l => COL[l] || '#9333ea';
@@ -323,13 +416,15 @@ const LAYOUT = [
 ];
 let G, pos = new Map();
 const nm = c => G.names.get(c);
-function chain(a, b, ln) {                                   // BFS หาสถานีระหว่างจุดยึด เพื่อจัดวางบนแผนที่
+
+function chain(a, b, ln) {
   const prev = new Map([[a, null]]), q = [a];
   for (let i = 0; i < q.length && !prev.has(b); i++)
     for (const e of G.adj.get(q[i]) || []) if (e.kind === 'ride' && e.line === ln && !prev.has(e.to)) { prev.set(e.to, q[i]); q.push(e.to); }
   if (!prev.has(b)) return null;
   const p = []; for (let c = b; c !== null; c = prev.get(c)) p.push(c); return p.reverse();
 }
+
 function layout() {
   pos = new Map();
   for (const [ln, A] of LAYOUT) for (let k = 0; k < A.length - 1; k++) {
@@ -337,14 +432,16 @@ function layout() {
     const p = chain(A[k][0], A[k + 1][0], ln); if (!p) continue;
     p.forEach((c, i) => { const t = i / (p.length - 1 || 1); pos.set(c, [A[k][1] + (A[k + 1][1] - A[k][1]) * t, A[k][2] + (A[k + 1][2] - A[k][2]) * t]); });
   }
-  const miss = [...G.lines.keys()].filter(c => !pos.has(c));  // สถานีที่ไม่รู้ตำแหน่ง (CSV อื่น) วางเป็นวงรอบนอก
+  const miss = [...G.lines.keys()].filter(c => !pos.has(c));
   miss.forEach((c, i) => { const a = i / miss.length * 6.283; pos.set(c, [400 + 370 * Math.cos(a), 310 + 285 * Math.sin(a)]); });
 }
+
 function drawMap(path) {
   let h = '';
   const dim = path ? .28 : 1, seen = new Set(), P = c => pos.get(c);
   for (const [u, es] of G.adj) for (const e of es) {
     const k = [u, e.to].sort().join('|') + (e.line || 'w'); if (seen.has(k)) continue; seen.add(k);
+    if (!P(u) || !P(e.to)) continue;
     const [x1, y1] = P(u), [x2, y2] = P(e.to);
     h += e.kind === 'ride'
       ? `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col(e.line)}" stroke-width="7" stroke-linecap="round" opacity="${dim}"/>`
@@ -355,6 +452,7 @@ function drawMap(path) {
     let seg = '';
     path.forEach((n, i) => {
       on.add(n.c); if (!i || n.c === path[i - 1].c) return;
+      if (!P(path[i - 1].c) || !P(n.c)) return;
       const [x1, y1] = P(path[i - 1].c), [x2, y2] = P(n.c), ride = n.kind === 'ride';
       seg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ride ? col(n.l) : '#f59e0b'}" stroke-width="${ride ? 11 : 7}" stroke-linecap="round" ${ride ? '' : 'stroke-dasharray="8 6"'}/>`;
     });
@@ -368,30 +466,33 @@ function drawMap(path) {
     if (hit || (!path && big)) h += `<text x="${x + 10}" y="${y - 9}">${nm(c)}</text>`;
   }
   for (const [c, t, bg] of path ? [[first, 'A', '#16a34a'], [last, 'B', '#e11d48']] : []) {
+    if (!P(c)) continue;
     const [x, y] = P(c);
     h += `<g class="pin"><circle cx="${x}" cy="${y}" r="13" fill="${bg}" stroke="#fff" stroke-width="3"/><text x="${x}" y="${y + 4}" text-anchor="middle" style="fill:#fff;stroke:none;font-size:12px">${t}</text></g>`;
   }
   $('map').innerHTML = h;
 }
+
 function legend() {
   const ls = new Set(); for (const s of G.lines.values()) s.forEach(l => ls.add(l));
   $('legend').innerHTML = [...ls].map(l => `<span><i style="background:${col(l)}"></i>${l}</span>`).join('') +
     `<span><i style="background:repeating-linear-gradient(90deg,#94a3b8 0 5px,transparent 5px 9px);height:3px"></i>${t('lwalk')}</span><span><i style="background:#f59e0b"></i>${t('lsel')}</span>`;
 }
+
 function fillSelects() {
   const by = new Map();
   for (const c of G.lines.keys()) { const n = nm(c); if (!by.has(n)) by.set(n, []); by.get(n).push(c); }
-  for (const sel of [$('from'), $('to')]) {
+  for (const sel of [$('from'),$('to')]) {
     sel.innerHTML = '';
     for (const [n, cs] of [...by].sort((a, b) => a[0].localeCompare(b[0]))) { const o = new Option(`${n} (${cs.join('/')})`, cs.join(',')); o.dataset.name = n; sel.add(o); }
   }
   setSel($('from'), 'Mo Chit'); setSel($('to'), 'Bang Wa');
 }
+
 function setSel(sel, name) { const o = [...sel.options].find(o => o.dataset.name === name); if (o) sel.value = o.value; }
 const PRESETS = [['หมอชิต → บางหว้า', 'Mo Chit → Bang Wa', 'Mo Chit', 'Bang Wa'], ['สนามกีฬา → ชิดลม (ผ่านสยาม)', 'National Stadium → Chit Lom (via Siam)', 'National Stadium', 'Chit Lom'], ['อโศก → ศาลาแดง', 'Asok → Sala Daeng', 'Asok', 'Sala Daeng'], ['เคหะ → ลักสอง', 'Kheha → Lak Song', 'Kheha', 'Lak Song']];
 function chips() { $('chips').innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${lang === 'th' ? p[0] : p[1]}</button>`).join(''); }
-$('chips').onclick = e => { const i = e.target.dataset.i; if (i === undefined) return; setSel($('from'), PRESETS[i][2]); setSel($('to'), PRESETS[i][3]); $('form').requestSubmit(); };
-$('swap').onclick = () => { const v = $('from').value; $('from').value = $('to').value; $('to').value = v; };
+$('chips').onclick = e => { const i = e.target.dataset.i; if (i === undefined) return; setSel($('from'), PRESETS[i][2]); setSel($('to'), PRESETS[i][3]); $('form').requestSubmit(); };$('swap').onclick = () => { const v = $('from').value; $('from').value = $('to').value; $('to').value = v; };
 
 function show(r, mode, timeStr) {
   lastRes = { r, mode, timeStr };
@@ -420,32 +521,35 @@ function show(r, mode, timeStr) {
   $('res').innerHTML = h; $('res').hidden = false; $('res').style.animation = 'none'; $('res').offsetHeight; $('res').style.animation = '';
   drawMap(P);
 }
+
 $('form').onsubmit = e => {
   e.preventDefault();
   if ($('from').value === $('to').value) { lastRes = null; $('res').innerHTML = `<h2>${t('same')}</h2>`; $('res').hidden = false; return; }
-  const r = findRoute($('from').value.split(','), $('to').value.split(','), document.querySelector('[name=om]:checked').value);
+  const r = findRoute($('from').value.split(','),$('to').value.split(','), document.querySelector('[name=om]:checked').value);
   if (r) show(r, document.querySelector('[name=tm]:checked').value, $('time').value);
   else { lastRes = null; $('res').innerHTML = `<h2>${t('none')}</h2>`; $('res').hidden = false; }
 };
+
 function load(text) {
   G = buildGraph(text); layout(); fillSelects(); legend(); drawMap(null); $('res').hidden = true;
   lastRes = null; texts();
 }
+
 function texts() {
-  $('status').textContent = t('status', G.rows, G.lines.size);
-  $('note').textContent = t('note', RIDE, WALK, SIAM) + (G.skipped.size ? t('skip', [...G.skipped].join(', ')) : '');
+  $('status').textContent = t('status', G.rows, G.lines.size);$('note').textContent = t('note', RIDE, WALK, SIAM) + (G.skipped.size ? t('skip', [...G.skipped].join(', ')) : '');
 }
+
 function setLang(l) {
   lang = l; try { localStorage.setItem('lang', l); } catch (e) {}
-  document.documentElement.lang = l; $('lang').textContent = t('lbl'); $('swap').title = t('swap');
+  document.documentElement.lang = l; $('lang').textContent = t('lbl');$('swap').title = t('swap');
   document.querySelectorAll('[data-i]').forEach(el => { if (el.dataset.i in D[l]) el.textContent = t(el.dataset.i); });
   chips(); if (G) { legend(); texts(); }
   if (lastRes && !$('res').hidden) show(lastRes.r, lastRes.mode, lastRes.timeStr);
 }
-function setNow() { const d = new Date(); $('time').value = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
-$('now').onclick = setNow;
-$('lang').onclick = () => setLang(lang === 'th' ? 'en' : 'th');
-$('file').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { load(await f.text()); } catch (err) { alert(t('err') + err.message); } };
+
+function setNow() { const d = new Date(); $('time').value = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }$('now').onclick = setNow;
+$('lang').onclick = () => setLang(lang === 'th' ? 'en' : 'th');$('file').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { load(await f.text()); } catch (err) { alert(t('err') + err.message); } };
+
 setNow(); setLang(lang); load($('csvData').textContent); setLang(lang);
 </script>
 </body>
